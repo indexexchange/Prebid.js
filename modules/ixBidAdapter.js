@@ -23,6 +23,13 @@ const PRICE_TO_DOLLAR_FACTOR = {
 const USER_SYNC_URL = 'https://js-sec.indexww.com/um/ixmatch.html';
 
 const FLOOR_SOURCE = { PBJS: 'p', IX: 'x' };
+const FIRST_PARTY_DATA = {
+  SITE: [
+    'id', 'name', 'domain', 'cat', 'sectioncat', 'pagecat', 'page', 'ref', 'search', 'mobile',
+    'privacypolicy', 'publisher', 'content', 'keywords', 'ext'
+  ],
+  USER: ['id', 'buyeruid', 'yob', 'gender', 'keywords', 'customdata', 'geo', 'data', 'ext']
+}
 
 /**
  * Transform valid bid request config object to banner impression object that will be sent to ad server.
@@ -503,20 +510,6 @@ function buildRequest(validBidRequests, bidderRequest, impressions, version) {
   const bidderCode = (bidderRequest && bidderRequest.bidderCode) || 'ix';
   const otherIxConfig = config.getConfig(bidderCode);
   if (otherIxConfig) {
-    // Append firstPartyData to r.site.page if firstPartyData exists.
-    if (typeof otherIxConfig.firstPartyData === 'object') {
-      const firstPartyData = otherIxConfig.firstPartyData;
-      let firstPartyString = '?';
-      for (const key in firstPartyData) {
-        if (firstPartyData.hasOwnProperty(key)) {
-          firstPartyString += `${encodeURIComponent(key)}=${encodeURIComponent(firstPartyData[key])}&`;
-        }
-      }
-      firstPartyString = firstPartyString.slice(0, -1);
-
-      r.site.page += firstPartyString;
-    }
-
     // Create t in payload if timeout is configured.
     if (typeof otherIxConfig.timeout === 'number') {
       payload.t = otherIxConfig.timeout;
@@ -587,6 +580,58 @@ function buildRequest(validBidRequests, bidderRequest, impressions, version) {
 
       if (impObj.hasOwnProperty('missingImps') && impObj.missingImps.length > 0) {
         currMissingImps.push(...impObj.missingImps);
+      }
+
+      // Append firstPartyData to r.site.page if firstPartyData exists.
+      if (otherIxConfig && typeof otherIxConfig.firstPartyData === 'object') {
+        const firstPartyData = otherIxConfig.firstPartyData;
+        let firstPartyString = '?';
+        for (const key in firstPartyData) {
+          if (firstPartyData.hasOwnProperty(key)) {
+            firstPartyString += `${encodeURIComponent(key)}=${encodeURIComponent(firstPartyData[key])}&`;
+          }
+        }
+        firstPartyString = firstPartyString.slice(0, -1);
+
+        const fpdReqSize = new Blob([firstPartyString]).size;
+
+        if (currReqSize + fpdReqSize < MAX_REQ_SIZE) {
+          r.site.page += firstPartyString;
+        } else {
+          utils.logError('ix bidder: IX config FPD request size has exceeded maximum request size.');
+        }
+      }
+
+      const fpd = config.getLegacyFpd(config.getConfig('ortb2')) || {};
+
+      if (!utils.isEmpty(fpd)) {
+        r.ext.ixdiag.fpd = true;
+
+        const site = { ...(fpd.site || fpd.context) };
+
+        Object.keys(site).forEach(key => {
+          if (FIRST_PARTY_DATA.SITE.indexOf(key) == -1) {
+            delete site[key];
+          }
+        });
+
+        const user = { ...fpd.user };
+
+        Object.keys(user).forEach(key => {
+          if (FIRST_PARTY_DATA.USER.indexOf(key) == -1) {
+            delete user[key];
+          }
+        });
+
+        const fpdReqSize = new Blob([utils.parseQueryStringParameters({ ...site, ...user })]).size;
+
+        if (currReqSize + fpdReqSize < MAX_REQ_SIZE) {
+          utils.mergeDeep(r.site, site);
+          r.user = r.user || {};
+          utils.mergeDeep(r.user, user);
+        } else {
+          utils.logError('ix bidder: FPD request size has exceeded maximum request size.');
+        }
       }
 
       i++;
