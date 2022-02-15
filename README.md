@@ -167,7 +167,8 @@ With `modules.json` containing the following
 [
   "openxBidAdapter",
   "rubiconBidAdapter",
-  "sovrnBidAdapter"
+  "sovrnBidAdapter",
+  "ixBidAdapter"
 ]
 ```
 
