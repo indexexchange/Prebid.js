@@ -43,7 +43,7 @@ const PRICE_TO_DOLLAR_FACTOR = {
   JPY: 1
 };
 const USER_SYNC_URL = 'https://js-sec.indexww.com/um/ixmatch.html';
-const RENDERER_URL = 'https://js-sec.indexww.com/htv/video-player.js';
+const RENDERER_URL = 'https://content.jwplatform.com/libraries/Jq6HIbgz.js';
 const FLOOR_SOURCE = { PBJS: 'p', IX: 'x' };
 export const ERROR_CODES = {
   BID_SIZE_INVALID_FORMAT: 1,
@@ -1132,20 +1132,26 @@ function getCachedErrors() {
  * @param {Object} bid
  */
 function outstreamRenderer(bid) {
-  bid.renderer.push(() => {
-    var config = {
-      width: bid.width,
-      height: bid.height,
-      timeout: 3000
-    };
-
-    // IXOutstreamPlayer supports both vastUrl and vastXml, so we can pass either.
-    // Since vastUrl is going to be deprecated from exchange response, vastXml takes priority.
-    if (bid.vastXml) {
-      window.IXOutstreamPlayer(bid.vastXml, bid.adUnitCode, config);
-    } else {
-      window.IXOutstreamPlayer(bid.vastUrl, bid.adUnitCode, config);
-    }
+  var options = Object(__WEBPACK_IMPORTED_MODULE_0__src_utils_js__["deepAccess"])(bid, 'mediaTypes.video.options', {});
+  bid.renderer.push(function () {
+    jwplayer(bid.adUnitCode).setup({
+      'aspectratio': '16:9',
+      'width': options.fillContainer ? '100%' : bid.width,
+      'height': bid.height,
+      'floating': options.floatOnScroll,
+      "autoPause": {
+        "viewability": true,
+        "pauseAds": true
+      },
+      'advertising': {
+        'client': 'vast',
+        'outstream': true,
+        'endstate': 'close',
+        'tag': bid.vastXml ? bid.vastXml : bid.vastUrl
+      },
+      'displayHeading': true,
+      'controls': true
+    });
   });
 }
 
