@@ -1132,25 +1132,25 @@ function getCachedErrors() {
  * @param {Object} bid
  */
 function outstreamRenderer(bid) {
-  var options = Object(__WEBPACK_IMPORTED_MODULE_0__src_utils_js__["deepAccess"])(bid, 'mediaTypes.video.options', {});
   bid.renderer.push(function () {
+    let videoParams = deepAccess(bid, 'params.0.video');
     jwplayer(bid.adUnitCode).setup({
-      'aspectratio': '16:9',
-      'width': options.fillContainer ? '100%' : bid.width,
-      'height': bid.height,
-      'floating': options.floatOnScroll,
-      "autoPause": {
-        "viewability": true,
-        "pauseAds": true
+      aspectratio: '16:9',
+      width: videoParams.fillContainer ? '100%' : bid.width,
+      height: bid.height,
+      autoPause: {
+        viewability: true,
+        pauseAds: true
       },
-      'advertising': {
-        'client': 'vast',
-        'outstream': true,
-        'endstate': 'close',
-        'tag': bid.vastXml ? bid.vastXml : bid.vastUrl
+      advertising: {
+        client: 'vast',
+        outstream: true,
+        endstate: 'close',
+        tag: bid.vastXml ? undefined : bid.vastUrl,
+        vastxml: bid.vastXml
       },
-      'displayHeading': true,
-      'controls': true
+      displayHeading: true,
+      controls: true
     });
   });
 }
