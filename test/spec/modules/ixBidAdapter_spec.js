@@ -695,22 +695,6 @@ describe('IndexexchangeAdapter', function () {
       expect(spec.isBidRequestValid(bid)).to.equal(true);
     });
 
-    it('should set bid[].renderer if renderer not defined at mediaType.video level', function () {
-      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
-        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: DEFAULT_MULTIFORMAT_BANNER_VALID_BID
-      });
-      expect(bid[0].renderer).to.be.exist;
-    });
-
-    it('should not set bid[].renderer if renderer defined at mediaType.video level', function () {
-      const outstreamAdUnit = DEFAULT_MULTIFORMAT_BANNER_VALID_BID;
-      outstreamAdUnit[0].mediaTypes.video.renderer = {}
-      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
-        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: DEFAULT_MULTIFORMAT_BANNER_VALID_BID
-      });
-      expect(bid[0].renderer).to.be.undefined;
-    });
-
     it('should return false when there is only bidFloor', function () {
       const bid = utils.deepClone(DEFAULT_BANNER_VALID_BID[0]);
       bid.params.bidFloor = 50;
@@ -2255,7 +2239,7 @@ describe('IndexexchangeAdapter', function () {
         expect(diagObj.iu).to.equal(0);
         expect(diagObj.nu).to.equal(0);
         expect(diagObj.ou).to.equal(2);
-        expect(diagObj.ren).to.equal(false);
+        expect(diagObj.ren).to.equal(true);
         expect(diagObj.mfu).to.equal(2);
         expect(diagObj.allu).to.equal(2);
         expect(diagObj.version).to.equal('$prebid.version$');
@@ -2487,6 +2471,61 @@ describe('IndexexchangeAdapter', function () {
       });
 
       expect(result[0]).to.deep.equal(expectedParse[0]);
+    });
+
+    it('should set bid[].renderer if renderer not defined at mediaType.video level', function () {
+      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
+        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: DEFAULT_MULTIFORMAT_BANNER_VALID_BID
+      });
+      expect(bid[0].renderer).to.exist;
+    });
+
+    it('should not set bid[].renderer if renderer defined at mediaType.video level', function () {
+      let outstreamAdUnit = utils.deepClone(DEFAULT_MULTIFORMAT_BANNER_VALID_BID);
+      outstreamAdUnit[0].mediaTypes.video.renderer = {
+        url: 'test',
+        render: function() {}
+      };
+      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
+        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: outstreamAdUnit
+      });
+      expect(bid[0].renderer).to.be.undefined;
+    });
+
+    it('should not set bid[].renderer if renderer defined at the ad unit level', function () {
+      let outstreamAdUnit = utils.deepClone(DEFAULT_MULTIFORMAT_BANNER_VALID_BID);
+      outstreamAdUnit[0].renderer = {
+        url: 'test',
+        render: function() {}
+      };
+      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
+        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: outstreamAdUnit
+      });
+      expect(bid[0].renderer).to.be.undefined;
+    });
+
+    it('should set bid[].renderer if ad unit renderer is invalid', function () {
+      let outstreamAdUnit = utils.deepClone(DEFAULT_MULTIFORMAT_BANNER_VALID_BID);
+      outstreamAdUnit[0].mediaTypes.video.renderer = {
+        url: 'test'
+      };
+      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
+        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: outstreamAdUnit
+      });
+      expect(bid[0].renderer).to.exist;
+    });
+
+    it('should set bid[].renderer if ad unit renderer is a backup', function () {
+      let outstreamAdUnit = utils.deepClone(DEFAULT_MULTIFORMAT_BANNER_VALID_BID);
+      outstreamAdUnit[0].mediaTypes.video.renderer = {
+        url: 'test',
+        render: function() {},
+        backupOnly: true
+      };
+      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
+        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: outstreamAdUnit
+      });
+      expect(bid[0].renderer).to.exist;
     });
 
     it('should get correct bid response for video ad and set bid.vastXml when mtype is 2 (video)', function () {

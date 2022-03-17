@@ -42,7 +42,6 @@ const MAX_REQUEST_LIMIT = 4;
 const PRICE_TO_DOLLAR_FACTOR = {
   JPY: 1
 };
-
 const USER_SYNC_URL = 'https://js-sec.indexww.com/um/ixmatch.html';
 const RENDERER_URL = 'https://content.jwplatform.com/libraries/Jq6HIbgz.js';
 const FLOOR_SOURCE = { PBJS: 'p', IX: 'x' };
@@ -833,7 +832,7 @@ function buildIXDiag(validBidRequests) {
     nu: 0,
     ou: 0,
     allu: 0,
-    ren: true,
+    ren: false,
     version: '$prebid.version$',
     userIds: _getUserIds(validBidRequests[0])
   };
@@ -857,13 +856,9 @@ function buildIXDiag(validBidRequests) {
 
       if (deepAccess(bid, 'mediaTypes.video.context') === 'outstream') {
         ixdiag.ou++;
-        // renderer only needed for outstream
 
-        const hasRenderer = typeof (deepAccess(bid, 'renderer') || deepAccess(bid, 'mediaTypes.video.renderer')) === 'object';
-
-        // if any outstream ad unit is missing a renderer, set ren status to false
-        if (!hasRenderer) {
-          ixdiag.ren = false;
+        if (mayUseIndexRenderer(bid)) {
+          ixdiag.ren = true;
         }
       }
 
@@ -1180,6 +1175,25 @@ function createRenderer(id) {
   return renderer;
 }
 
+/**
+ * Returns whether our renderer could potentially be used.
+ * @param {*} bid bid object
+ */
+function mayUseIndexRenderer(bid) {
+  if (deepAccess(bid, 'mediaTypes.video.context') !== 'outstream') {
+    return false;
+  }
+
+  let renderer = deepAccess(bid, 'mediaTypes.video.renderer');
+  if (!renderer) {
+    renderer = deepAccess(bid, 'renderer');
+  }
+
+  let isValid = !!(typeof (renderer) === 'object' && renderer.url && renderer.render);
+  // if renderer on the adunit is not valid or it's only a backup, our renderer may be used
+  return !isValid || renderer.backupOnly;
+}
+
 export const spec = {
 
   code: BIDDER_CODE,
@@ -1373,7 +1387,7 @@ export const spec = {
         const bidRequest = getBidRequest(innerBids[j].impid, requestBid.imp, bidderRequest.validBidRequests);
         bid = parseBid(innerBids[j], responseBody.cur, bidRequest);
 
-        if (!deepAccess(bid, 'mediaTypes.video.renderer') && deepAccess(bid, 'mediaTypes.video.context') === 'outstream') {
+        if (mayUseIndexRenderer(bidRequest)) {
           bid.renderer = createRenderer(innerBids[j].bidId);
         }
 
