@@ -857,7 +857,7 @@ function buildIXDiag(validBidRequests) {
       if (deepAccess(bid, 'mediaTypes.video.context') === 'outstream') {
         ixdiag.ou++;
 
-        if (mayUseIndexRenderer(bid)) {
+        if (isIndexRendererPreferred(bid)) {
           ixdiag.ren = true;
         }
       }
@@ -1179,17 +1179,18 @@ function createRenderer(id) {
  * Returns whether our renderer could potentially be used.
  * @param {*} bid bid object
  */
-function mayUseIndexRenderer(bid) {
+function isIndexRendererPreferred(bid) {
   if (deepAccess(bid, 'mediaTypes.video.context') !== 'outstream') {
     return false;
   }
 
+  // ad unit renderer could be on the adUnit.mediaTypes.video level or adUnit level
   let renderer = deepAccess(bid, 'mediaTypes.video.renderer');
   if (!renderer) {
     renderer = deepAccess(bid, 'renderer');
   }
 
-  let isValid = !!(typeof (renderer) === 'object' && renderer.url && renderer.render);
+  const isValid = !!(typeof (renderer) === 'object' && renderer.url && renderer.render);
   // if renderer on the adunit is not valid or it's only a backup, our renderer may be used
   return !isValid || renderer.backupOnly;
 }
@@ -1387,7 +1388,7 @@ export const spec = {
         const bidRequest = getBidRequest(innerBids[j].impid, requestBid.imp, bidderRequest.validBidRequests);
         bid = parseBid(innerBids[j], responseBody.cur, bidRequest);
 
-        if (mayUseIndexRenderer(bidRequest)) {
+        if (isIndexRendererPreferred(bidRequest)) {
           bid.renderer = createRenderer(innerBids[j].bidId);
         }
 
