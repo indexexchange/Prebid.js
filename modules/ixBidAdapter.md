@@ -77,7 +77,6 @@ object are detailed here.
 |video.minduration| Required | Integer | Minimum video ad duration in seconds.
 |video.maxduration| Required | Integer | Maximum video ad duration in seconds.
 |video.protocol / video.protocols| Required | Integer / Integer[] | Either a single protocol provided as an integer, or protocols provided as a list of integers. `2` - VAST 2.0, `3` - VAST 3.0, `5` - VAST 2.0 Wrapper, `6` - VAST 3.0 Wrapper
-| video.fillContainer | Optional | Boolean | Whether the outstream video should be the same width as the content (keeping the appropriate aspect ratio). Defaults to `false`.
 
 ## Deprecation warning
 

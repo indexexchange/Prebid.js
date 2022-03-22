@@ -1131,10 +1131,9 @@ function getCachedErrors() {
  */
 function outstreamRenderer(bid) {
   bid.renderer.push(function () {
-    let videoParams = deepAccess(bid, 'params.0.video');
     // eslint-disable-next-line no-undef
     jwplayer(bid.adUnitCode).setup({
-      width: videoParams.fillContainer ? '100%' : bid.width,
+      width: bid.width,
       height: bid.height,
       autoPause: {
         viewability: true,
