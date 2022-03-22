@@ -1134,7 +1134,6 @@ function outstreamRenderer(bid) {
     let videoParams = deepAccess(bid, 'params.0.video');
     // eslint-disable-next-line no-undef
     jwplayer(bid.adUnitCode).setup({
-      aspectratio: '16:9',
       width: videoParams.fillContainer ? '100%' : bid.width,
       height: bid.height,
       autoPause: {
@@ -1148,7 +1147,6 @@ function outstreamRenderer(bid) {
         tag: bid.vastXml ? undefined : bid.vastUrl,
         vastxml: bid.vastXml
       },
-      displayHeading: true,
       controls: true
     });
   });
