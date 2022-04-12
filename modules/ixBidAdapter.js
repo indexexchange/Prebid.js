@@ -4,6 +4,7 @@ import {
   deepAccess,
   deepClone,
   deepSetValue,
+  getGptSlotInfoForAdUnitCode,
   hasDeviceAccess,
   inIframe,
   isArray,
@@ -30,6 +31,7 @@ const BIDDER_CODE = 'ix';
 const ALIAS_BIDDER_CODE = 'roundel';
 const GLOBAL_VENDOR_ID = 10;
 const SECURE_BID_URL = 'https://htlb.casalemedia.com/cygnus';
+const SECURE_BID_URL = 'http://localhost/cygnus'
 const SUPPORTED_AD_TYPES = [BANNER, VIDEO];
 const BANNER_ENDPOINT_VERSION = 7.2;
 const VIDEO_ENDPOINT_VERSION = 8.1;
@@ -43,7 +45,7 @@ const PRICE_TO_DOLLAR_FACTOR = {
   JPY: 1
 };
 const USER_SYNC_URL = 'https://js-sec.indexww.com/um/ixmatch.html';
-const RENDERER_URL = 'https://content.jwplatform.com/libraries/Jq6HIbgz.js';
+
 const FLOOR_SOURCE = { PBJS: 'p', IX: 'x' };
 export const ERROR_CODES = {
   BID_SIZE_INVALID_FORMAT: 1,
@@ -964,7 +966,7 @@ function getPageUrl() {
  * @returns {string}
  */
 function detectParamsType(validBidRequest) {
-  if (deepAccess(validBidRequest, 'params.video') && deepAccess(validBidRequest, 'mediaTypes.video')) {
+  if (deepAccess(validBidRequest, 'params.video') || deepAccess(validBidRequest, 'mediaTypes.video')) {
     return VIDEO;
   }
 
@@ -1126,28 +1128,18 @@ function getCachedErrors() {
 
 /**
  *
- * Initialize Outstream Renderer
+ * Initialize IX Outstream Renderer
  * @param {Object} bid
  */
 function outstreamRenderer(bid) {
   bid.renderer.push(function () {
-    // eslint-disable-next-line no-undef
-    jwplayer(bid.adUnitCode).setup({
-      width: bid.width,
-      height: bid.height,
-      autoPause: {
-        viewability: true,
-        pauseAds: true
-      },
-      advertising: {
-        client: 'vast',
-        outstream: true,
-        endstate: 'close',
-        tag: bid.vastXml ? undefined : bid.vastUrl,
-        vastxml: bid.vastXml
-      },
-      controls: true
-    });
+    const adUnitCode = bid.adUnitCode;
+    const divId = document.getElementById(adUnitCode) ? adUnitCode : getGptSlotInfoForAdUnitCode(adUnitCode).divId;
+    if (!divId) {
+      logWarn(`IX Bid Adapter: adUnitCode: ${divId} not found on page.`);
+      return;
+    }
+    window.createIXPlayer(divId, bid);
   });
 }
 
@@ -1156,12 +1148,17 @@ function outstreamRenderer(bid) {
  * @param {string} id
  * @returns {Renderer}
  */
-function createRenderer(id) {
+function createRenderer(bid) {
   const renderer = Renderer.install({
-    id: id,
-    url: RENDERER_URL,
+    id: bid.bidId,
+    url: bid.videoplayerurl ? bid.videoplayerurl : '',
     loaded: false
   });
+
+  if (!bid.videoplayerurl) {
+    logWarn('Outstream renderer URL not found');
+    return renderer;
+  }
 
   try {
     renderer.setRender(outstreamRenderer);
@@ -1275,6 +1272,12 @@ export const spec = {
         return false;
       }
     }
+
+    if (bidToVideoImp(bid).video.placement === OUTSTREAM && (mediaTypeVideoPlayerSize[0] < 300 || mediaTypeVideoPlayerSize[1] < 250) && isIndexRendererPreferred(bid)) {
+      logError(`IX Bid Adapter: ${mediaTypeVideoPlayerSize} is an invalid size for IX outstream renderer`);
+      return false;
+    }
+
     return true;
   },
 
@@ -1386,7 +1389,7 @@ export const spec = {
         bid = parseBid(innerBids[j], responseBody.cur, bidRequest);
 
         if (isIndexRendererPreferred(bidRequest)) {
-          bid.renderer = createRenderer(innerBids[j].bidId);
+          bid.renderer = createRenderer(innerBids[j]);
         }
 
         bids.push(bid);
