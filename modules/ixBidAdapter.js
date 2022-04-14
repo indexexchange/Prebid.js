@@ -40,6 +40,7 @@ const VIDEO_TIME_TO_LIVE = 3600; // 1hr
 const NET_REVENUE = true;
 const MAX_REQUEST_SIZE = 8000;
 const MAX_REQUEST_LIMIT = 4;
+const OUTSTREAM_MINIMUM_PLAYER_SZE = 550 // width: 300 + height: 250;
 const PRICE_TO_DOLLAR_FACTOR = {
   JPY: 1
 };
@@ -1154,15 +1155,15 @@ function createRenderer(id, renderUrl) {
     loaded: false
   });
 
-  if (!renderUrl) {
-    logWarn('Outstream renderer URL not found');
-    return renderer;
-  }
-
   try {
     renderer.setRender(outstreamRenderer);
   } catch (err) {
     logWarn('Prebid Error calling setRender on renderer', err);
+  }
+
+  if (!renderUrl) {
+    logWarn('Outstream renderer URL not found');
+    return renderer;
   }
 
   return renderer;
@@ -1272,9 +1273,13 @@ export const spec = {
       }
     }
 
-    if (bidToVideoImp(bid).video.placement === OUTSTREAM && (mediaTypeVideoPlayerSize[0] < 300 || mediaTypeVideoPlayerSize[1] < 250) && isIndexRendererPreferred(bid)) {
-      logError(`IX Bid Adapter: ${mediaTypeVideoPlayerSize} is an invalid size for IX outstream renderer`);
-      return false;
+    if (deepAccess(bidToVideoImp(bid), 'video.placement') === OUTSTREAM) {
+      const playerSize = deepAccess(bidToVideoImp(bid), 'video.playerSize')
+      const playerSizeTotal = playerSize[0] + playerSize[1];
+      if (playerSizeTotal < OUTSTREAM_MINIMUM_PLAYER_SZE && isIndexRendererPreferred(bid)) {
+        logError(`IX Bid Adapter: ${mediaTypeVideoPlayerSize} is an invalid size for IX outstream renderer`);
+        return false;
+      }
     }
 
     return true;
