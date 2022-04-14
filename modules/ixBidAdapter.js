@@ -31,7 +31,6 @@ const BIDDER_CODE = 'ix';
 const ALIAS_BIDDER_CODE = 'roundel';
 const GLOBAL_VENDOR_ID = 10;
 const SECURE_BID_URL = 'https://htlb.casalemedia.com/cygnus';
-const SECURE_BID_URL = 'http://localhost/cygnus'
 const SUPPORTED_AD_TYPES = [BANNER, VIDEO];
 const BANNER_ENDPOINT_VERSION = 7.2;
 const VIDEO_ENDPOINT_VERSION = 8.1;
@@ -1148,14 +1147,14 @@ function outstreamRenderer(bid) {
  * @param {string} id
  * @returns {Renderer}
  */
-function createRenderer(bid) {
+function createRenderer(id, renderUrl) {
   const renderer = Renderer.install({
-    id: bid.bidId,
-    url: bid.videoplayerurl ? bid.videoplayerurl : '',
+    id: id,
+    url: renderUrl,
     loaded: false
   });
 
-  if (!bid.videoplayerurl) {
+  if (!renderUrl) {
     logWarn('Outstream renderer URL not found');
     return renderer;
   }
@@ -1389,7 +1388,8 @@ export const spec = {
         bid = parseBid(innerBids[j], responseBody.cur, bidRequest);
 
         if (isIndexRendererPreferred(bidRequest)) {
-          bid.renderer = createRenderer(innerBids[j]);
+          const renderUrl = deepAccess(requestBid, 'responseBody.ext.videoplayerurl');
+          bid.renderer = createRenderer(innerBids[j].bidId, renderUrl);
         }
 
         bids.push(bid);
