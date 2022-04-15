@@ -2749,7 +2749,7 @@ describe('IndexexchangeAdapter', function () {
     });
   });
 
-  describe('LocalStorage ixdiag', () => {
+  xdescribe('LocalStorage error codes', () => {
     let TODAY = new Date().toISOString().slice(0, 10);
     const key = 'ixdiag';
 
