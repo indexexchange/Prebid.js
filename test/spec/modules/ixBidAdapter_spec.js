@@ -564,6 +564,14 @@ describe('IndexexchangeAdapter', function () {
   });
 
   describe('isBidRequestValid', function () {
+    it('should return false if outstream player size is less than 300x250', function () {
+      const bid = utils.deepClone(DEFAULT_VIDEO_VALID_BID[0]);
+      bid.mediaTypes.video.context = 'outstream';
+      bid.mediaTypes.video.playerSize = [300, 249];
+      bid.mediaTypes.video.placement = 4;
+      expect(spec.isBidRequestValid(bid)).to.equal(false);
+    });
+
     it('should return true when required params found for a banner or video ad', function () {
       expect(spec.isBidRequestValid(DEFAULT_BANNER_VALID_BID[0])).to.equal(true);
       expect(spec.isBidRequestValid(DEFAULT_VIDEO_VALID_BID[0])).to.equal(true);

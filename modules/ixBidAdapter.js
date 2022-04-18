@@ -41,6 +41,7 @@ const NET_REVENUE = true;
 const MAX_REQUEST_SIZE = 8000;
 const MAX_REQUEST_LIMIT = 4;
 const OUTSTREAM_MINIMUM_PLAYER_SZE = 550 // width: 300 + height: 250;
+const VALID_OUTSTREAM_PLACEMENTS = [4, 5]
 const PRICE_TO_DOLLAR_FACTOR = {
   JPY: 1
 };
@@ -966,7 +967,7 @@ function getPageUrl() {
  * @returns {string}
  */
 function detectParamsType(validBidRequest) {
-  if (deepAccess(validBidRequest, 'params.video') || deepAccess(validBidRequest, 'mediaTypes.video')) {
+  if (deepAccess(validBidRequest, 'mediaTypes.video') && bidToVideoImp(validBidRequest).video) {
     return VIDEO;
   }
 
@@ -1273,7 +1274,8 @@ export const spec = {
       }
     }
 
-    if (deepAccess(bidToVideoImp(bid), 'video.placement') === OUTSTREAM) {
+    const videoPlacement = deepAccess(bidToVideoImp(bid), 'video.placement');
+    if (VALID_OUTSTREAM_PLACEMENTS.indexOf(videoPlacement) != -1) {
       const playerSize = deepAccess(bidToVideoImp(bid), 'video.playerSize')
       const playerSizeTotal = playerSize[0] + playerSize[1];
       if (playerSizeTotal < OUTSTREAM_MINIMUM_PLAYER_SZE && isIndexRendererPreferred(bid)) {
