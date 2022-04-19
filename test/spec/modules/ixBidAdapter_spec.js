@@ -402,7 +402,7 @@ describe('IndexexchangeAdapter', function () {
       }
     ],
     ext: {
-      videoplayerurl: 'https://js-sec.indexww.com/outstream/jw-player-vx.x.x-x.js'
+      videoplayerurl: 'https://test.com/video-renderer.js'
     }
   };
 
