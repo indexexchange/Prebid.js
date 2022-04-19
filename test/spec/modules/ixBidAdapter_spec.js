@@ -193,6 +193,35 @@ describe('IndexexchangeAdapter', function () {
     }
   ];
 
+  const DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS = [
+    {
+      bidder: 'ix',
+      params: {
+        siteId: '456'
+      },
+      sizes: [400, 100],
+      mediaTypes: {
+        video: {
+          context: 'instream',
+          playerSize: [400, 100],
+          mimes: [
+            'video/mp4',
+            'video/webm'
+          ],
+          minduration: 0,
+          maxduration: 60,
+          protocols: [2]
+        }
+      },
+      adUnitCode: 'div-gpt-ad-1460505748562-0',
+      transactionId: '173f49a8-7549-4218-a23c-e7ba59b47230',
+      bidId: '1a2b3c4e',
+      bidderRequestId: '11a22b33c44e',
+      auctionId: '1aa2bb3cc4de',
+      schain: SAMPLE_SCHAIN
+    }
+  ];
+
   const DEFAULT_VIDEO_VALID_BID = [
     {
       bidder: 'ix',
@@ -371,7 +400,10 @@ describe('IndexexchangeAdapter', function () {
         ],
         seat: '3971'
       }
-    ]
+    ],
+    ext: {
+      videoplayerurl: 'https://js-sec.indexww.com/outstream/jw-player-vx.x.x-x.js'
+    }
   };
 
   const DEFAULT_VIDEO_BID_RESPONSE_WITH_MTYPE_SET = {
@@ -568,7 +600,6 @@ describe('IndexexchangeAdapter', function () {
       const bid = utils.deepClone(DEFAULT_VIDEO_VALID_BID[0]);
       bid.mediaTypes.video.context = 'outstream';
       bid.mediaTypes.video.playerSize = [300, 249];
-      bid.mediaTypes.video.placement = 4;
       expect(spec.isBidRequestValid(bid)).to.equal(false);
     });
 
@@ -1827,9 +1858,8 @@ describe('IndexexchangeAdapter', function () {
 
     describe('request should contain both banner and video requests', function () {
       const request = spec.buildRequests([DEFAULT_BANNER_VALID_BID[0], DEFAULT_VIDEO_VALID_BID[0]]);
-
       it('should have banner request', () => {
-        const bannerImpression = JSON.parse(request[0].data.r).imp[0];
+        let bannerImpression = JSON.parse(request[0].data.r).imp[0];
 
         expect(JSON.parse(request[0].data.r).imp).to.have.lengthOf(1);
         expect(JSON.parse(request[0].data.v)).to.equal(BANNER_ENDPOINT_VERSION);
@@ -2169,6 +2199,16 @@ describe('IndexexchangeAdapter', function () {
       const { ext: { gpid } } = JSON.parse(requests[0].data.r).imp[0];
       expect(gpid).to.equal(GPID);
     });
+
+    it('should build video request when if video obj is not provided at params level', () => {
+      const request = spec.buildRequests([DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0]]);
+      const videoImpression = JSON.parse(request[0].data.r).imp[0];
+
+      expect(JSON.parse(request[0].data.v)).to.equal(VIDEO_ENDPOINT_VERSION);
+      expect(videoImpression.id).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].bidId);
+      expect(videoImpression.video.w).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].mediaTypes.video.playerSize[0]);
+      expect(videoImpression.video.h).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].mediaTypes.video.playerSize[1]);
+    });
   });
 
   describe('buildRequestMultiFormat', function () {
@@ -2486,6 +2526,13 @@ describe('IndexexchangeAdapter', function () {
         data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: DEFAULT_MULTIFORMAT_BANNER_VALID_BID
       });
       expect(bid[0].renderer).to.exist;
+    });
+
+    it('should set renderer URL by parsing video response', function () {
+      const bid = spec.interpretResponse({ body: DEFAULT_VIDEO_BID_RESPONSE }, {
+        data: DEFAULT_BIDDER_REQUEST_DATA, validBidRequests: DEFAULT_MULTIFORMAT_BANNER_VALID_BID
+      });
+      expect(bid[0].renderer.url).to.equal(DEFAULT_VIDEO_BID_RESPONSE.ext.videoplayerurl);
     });
 
     it('should not set bid[].renderer if renderer defined at mediaType.video level', function () {

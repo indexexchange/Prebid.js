@@ -41,7 +41,6 @@ const NET_REVENUE = true;
 const MAX_REQUEST_SIZE = 8000;
 const MAX_REQUEST_LIMIT = 4;
 const OUTSTREAM_MINIMUM_PLAYER_SZE = 550 // width: 300 + height: 250;
-const VALID_OUTSTREAM_PLACEMENTS = [4, 5]
 const PRICE_TO_DOLLAR_FACTOR = {
   JPY: 1
 };
@@ -1274,10 +1273,9 @@ export const spec = {
       }
     }
 
-    const videoPlacement = deepAccess(bidToVideoImp(bid), 'video.placement');
-    if (VALID_OUTSTREAM_PLACEMENTS.indexOf(videoPlacement) != -1) {
-      const playerSize = deepAccess(bidToVideoImp(bid), 'video.playerSize')
-      const playerSizeTotal = playerSize[0] + playerSize[1];
+    const outstreamPlayerSize = deepAccess(bidToVideoImp(bid), 'video.playerSize');
+    if (deepAccess(bid, 'mediaTypes.video.context') === OUTSTREAM && outstreamPlayerSize) {
+      const playerSizeTotal = outstreamPlayerSize[0] + outstreamPlayerSize[1];
       if (playerSizeTotal < OUTSTREAM_MINIMUM_PLAYER_SZE && isIndexRendererPreferred(bid)) {
         logError(`IX Bid Adapter: ${mediaTypeVideoPlayerSize} is an invalid size for IX outstream renderer`);
         return false;
@@ -1395,7 +1393,7 @@ export const spec = {
         bid = parseBid(innerBids[j], responseBody.cur, bidRequest);
 
         if (isIndexRendererPreferred(bidRequest)) {
-          const renderUrl = deepAccess(requestBid, 'responseBody.ext.videoplayerurl');
+          const renderUrl = deepAccess(responseBody, 'ext.videoplayerurl');
           bid.renderer = createRenderer(innerBids[j].bidId, renderUrl);
         }
 
