@@ -596,11 +596,22 @@ describe('IndexexchangeAdapter', function () {
   });
 
   describe('isBidRequestValid', function () {
-    it('should return false if outstream player size is less than 300x250', function () {
+    it('should return false if outstream player size is less than 300x250 and IX renderer is preferred', function () {
       const bid = utils.deepClone(DEFAULT_VIDEO_VALID_BID[0]);
       bid.mediaTypes.video.context = 'outstream';
       bid.mediaTypes.video.playerSize = [300, 249];
       expect(spec.isBidRequestValid(bid)).to.equal(false);
+    });
+
+    it('should return true if outstream player size is less than 300x250 and IX renderer is not preferred', function () {
+      const bid = utils.deepClone(DEFAULT_VIDEO_VALID_BID[0]);
+      bid.mediaTypes.video.renderer = {
+        url: 'test',
+        render: () => {}
+      };
+      bid.mediaTypes.video.context = 'outstream';
+      bid.mediaTypes.video.playerSize = [300, 249];
+      expect(spec.isBidRequestValid(bid)).to.equal(true);
     });
 
     it('should return true when required params found for a banner or video ad', function () {
