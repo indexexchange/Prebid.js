@@ -30,7 +30,8 @@ import {Renderer} from '../src/Renderer.js';
 const BIDDER_CODE = 'ix';
 const ALIAS_BIDDER_CODE = 'roundel';
 const GLOBAL_VENDOR_ID = 10;
-const SECURE_BID_URL = 'https://htlb.casalemedia.com/cygnus';
+// const SECURE_BID_URL = 'https://htlb.casalemedia.com/cygnus';
+var SECURE_BID_URL = 'https://header-bidding-server.com/cygnus'; // For testing only. To be removed before creating PR.
 const SUPPORTED_AD_TYPES = [BANNER, VIDEO];
 const BANNER_ENDPOINT_VERSION = 7.2;
 const VIDEO_ENDPOINT_VERSION = 8.1;
