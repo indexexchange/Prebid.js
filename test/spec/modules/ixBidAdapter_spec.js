@@ -203,7 +203,7 @@ describe('IndexexchangeAdapter', function () {
       mediaTypes: {
         video: {
           context: 'instream',
-          playerSize: [400, 100],
+          playerSize: [[400, 100]],
           mimes: [
             'video/mp4',
             'video/webm'
@@ -265,7 +265,7 @@ describe('IndexexchangeAdapter', function () {
       mediaTypes: {
         video: {
           context: 'outstream',
-          playerSize: [600, 700]
+          playerSize: [[600, 700]]
         },
         banner: {
           sizes: [[300, 250], [300, 600], [400, 500]]
@@ -300,7 +300,7 @@ describe('IndexexchangeAdapter', function () {
       mediaTypes: {
         video: {
           context: 'outstream',
-          playerSize: [300, 250]
+          playerSize: [[300, 250]]
         },
         banner: {
           sizes: [[300, 250], [300, 600]]
@@ -599,7 +599,7 @@ describe('IndexexchangeAdapter', function () {
     it('should return false if outstream player size is less than 300x250 and IX renderer is preferred', function () {
       const bid = utils.deepClone(DEFAULT_VIDEO_VALID_BID[0]);
       bid.mediaTypes.video.context = 'outstream';
-      bid.mediaTypes.video.playerSize = [300, 249];
+      bid.mediaTypes.video.playerSize = [[300, 249]];
       expect(spec.isBidRequestValid(bid)).to.equal(false);
     });
 
@@ -610,7 +610,7 @@ describe('IndexexchangeAdapter', function () {
         render: () => {}
       };
       bid.mediaTypes.video.context = 'outstream';
-      bid.mediaTypes.video.playerSize = [300, 249];
+      bid.mediaTypes.video.playerSize = [[300, 249]];
       expect(spec.isBidRequestValid(bid)).to.equal(true);
     });
 
@@ -674,7 +674,7 @@ describe('IndexexchangeAdapter', function () {
       const bid = utils.deepClone(DEFAULT_VIDEO_VALID_BID[0]);
       bid.mediaTypes = {
         video: {
-          playerSize: [300, 250]
+          playerSize: [[300, 250]]
         }
       };
       bid.params.size = [100, 200];
@@ -2217,8 +2217,8 @@ describe('IndexexchangeAdapter', function () {
 
       expect(JSON.parse(request[0].data.v)).to.equal(VIDEO_ENDPOINT_VERSION);
       expect(videoImpression.id).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].bidId);
-      expect(videoImpression.video.w).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].mediaTypes.video.playerSize[0]);
-      expect(videoImpression.video.h).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].mediaTypes.video.playerSize[1]);
+      expect(videoImpression.video.w).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].mediaTypes.video.playerSize[0][0]);
+      expect(videoImpression.video.h).to.equal(DEFAULT_VIDEO_VALID_BID_NO_VIDEO_PARAMS[0].mediaTypes.video.playerSize[0][1]);
     });
   });
 
@@ -2289,8 +2289,8 @@ describe('IndexexchangeAdapter', function () {
         expect(JSON.parse(request[1].data.r).imp).to.have.lengthOf(1);
         expect(JSON.parse(request[1].data.v)).to.equal(VIDEO_ENDPOINT_VERSION);
         expect(videoImpression.id).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].bidId);
-        expect(videoImpression.video.w).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].mediaTypes.video.playerSize[0]);
-        expect(videoImpression.video.h).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].mediaTypes.video.playerSize[1]);
+        expect(videoImpression.video.w).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].mediaTypes.video.playerSize[0][0]);
+        expect(videoImpression.video.h).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].mediaTypes.video.playerSize[0][1]);
       });
 
       it('should contain all correct IXdiag properties', function () {
