@@ -30,8 +30,7 @@ import {Renderer} from '../src/Renderer.js';
 const BIDDER_CODE = 'ix';
 const ALIAS_BIDDER_CODE = 'roundel';
 const GLOBAL_VENDOR_ID = 10;
-// const SECURE_BID_URL = 'https://htlb.casalemedia.com/cygnus';
-const SECURE_BID_URL = 'https://header-bidding-server.com/cygnus'; // For testing only. To be removed before creating PR.
+const SECURE_BID_URL = 'https://htlb.casalemedia.com/cygnus';
 const SUPPORTED_AD_TYPES = [BANNER, VIDEO];
 const BANNER_ENDPOINT_VERSION = 7.2;
 const VIDEO_ENDPOINT_VERSION = 8.1;
@@ -1160,11 +1159,12 @@ function createRenderer(id, renderUrl) {
     renderer.setRender(outstreamRenderer);
   } catch (err) {
     logWarn('Prebid Error calling setRender on renderer', err);
+    return null;
   }
 
   if (!renderUrl) {
     logWarn('Outstream renderer URL not found');
-    return renderer;
+    return null;
   }
 
   return renderer;
@@ -1397,6 +1397,9 @@ export const spec = {
         if (bid.mediaType === VIDEO && isIndexRendererPreferred(bidRequest)) {
           const renderUrl = deepAccess(responseBody, 'ext.videoplayerurl');
           bid.renderer = createRenderer(innerBids[j].bidId, renderUrl);
+          if (!bid.renderer) {
+            continue;
+          }
         }
 
         bids.push(bid);
