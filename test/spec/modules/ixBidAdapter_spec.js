@@ -2468,21 +2468,13 @@ describe('IndexexchangeAdapter', function () {
   });
 
   describe('buildRequestNative', function () {
-<<<<<<< Updated upstream
     it('should build request with expected params', function() {
-      const request = spec.buildRequests(DEFAULT_NATIVE_VALID_BID, DEFAULT_OPTION);
-      const query = request[0].data;
-
-      expect(query.hasOwnProperty('v')).to.equal(false);
-      expect(query.s).to.equal(DEFAULT_NATIVE_VALID_BID[0].params.siteId);
-      expect(query.r).to.exist;
-      expect(query.ac).to.equal('j');
-      expect(query.sd).to.equal(1);
-      expect(JSON.parse(query.r).at).to.equal(1);
+      const request = spec.buildRequests(DEFAULT_NATIVE_VALID_BID, DEFAULT_OPTION)[0];
+      const payload = extractPayload(request);
+      expect(request.url).to.equal(IX_SECURE_ENDPOINT + '?s=' + DEFAULT_NATIVE_VALID_BID[0].params.siteId);
+      expect(payload.at).to.equal(1);
     });
 
-=======
->>>>>>> Stashed changes
     it('should send gpid in request if ortb2Imp.ext.gpid exists', function () {
       const GPID = '/19968336/some-adunit-path';
       const bids = utils.deepClone(DEFAULT_NATIVE_VALID_BID);
@@ -2511,13 +2503,8 @@ describe('IndexexchangeAdapter', function () {
         assets: [{id: 0, required: 0, title: {len: 140}}, {id: 1, required: 0, video: {mimes: ['javascript'], minduration: 10, maxduration: 60, protocols: [1]}}]
       }
       const request = spec.buildRequests(bid, DEFAULT_OPTION);
-<<<<<<< Updated upstream
-      const nativeImpression = JSON.parse(request[0].data.r).imp[0];
-      expect(nativeImpression.native).to.deep.equal({request: '{"assets":[{"id":0,"required":0,"title":{"len":140}},{"id":1,"required":0,"video":{"mimes":["javascript"],"minduration":10,"maxduration":60,"protocols":[1]}}],"eventtrackers":[{"event":1,"methods":[1,2]}],"privacy":1}', ver: '1.2'});
-=======
       const nativeImpression = extractPayload(request[0]).imp[0];
-      expect(nativeImpression.native).to.deep.equal({request: '{"assets":[{"required":0,"title":{"len":200},"id":100},{"required":0,"video":{"mimes":["javascript"],"minduration":10,"maxduration":60,"protocols":[1]},"id":300}],"ver":"1.2","eventtrackers":[{"event":1,"methods":[1,2]}],"privacy":1}', ver: '1.2'});
->>>>>>> Stashed changes
+      expect(nativeImpression.native).to.deep.equal({request: '{"assets":[{"id":0,"required":0,"title":{"len":140}},{"id":1,"required":0,"video":{"mimes":["javascript"],"minduration":10,"maxduration":60,"protocols":[1]}}],"eventtrackers":[{"event":1,"methods":[1,2]}],"privacy":1}', ver: '1.2'});
     });
 
     it('should build request with all possible Prebid asset properties', function() {
@@ -2645,13 +2632,8 @@ describe('IndexexchangeAdapter', function () {
         ]
       }
       const request = spec.buildRequests(bid, DEFAULT_OPTION);
-<<<<<<< Updated upstream
-      const nativeImpression = JSON.parse(request[0].data.r).imp[0];
-      expect(nativeImpression.native).to.deep.equal({request: '{"ver":"1.2","assets":[{"id":0,"required":0,"title":{"len":140}},{"id":1,"required":0,"data":{"type":2}},{"id":2,"required":0,"data":{"type":10}},{"id":3,"required":0,"data":{"type":1}},{"id":4,"required":0,"img":{"type":1}},{"id":5,"required":0,"img":{"type":3}},{"id":6,"required":0},{"id":7,"required":0,"data":{"type":11}},{"id":8,"required":0},{"id":9,"required":0},{"id":10,"required":0,"data":{"type":12}},{"id":11,"required":0,"data":{"type":3}},{"id":12,"required":0,"data":{"type":5}},{"id":13,"required":0,"data":{"type":4}},{"id":14,"required":0,"data":{"type":6}},{"id":15,"required":0,"data":{"type":7}},{"id":16,"required":0,"data":{"type":9}},{"id":17,"required":0,"data":{"type":8}}],"eventtrackers":[{"event":1,"methods":[1,2]}],"privacy":1}', ver: '1.2'});
-=======
       const nativeImpression = extractPayload(request[0]).imp[0];
-      expect(nativeImpression.native).to.deep.equal({request: '{"assets":[{"required":0,"title":{"len":25},"id":100},{"required":0,"data":{"type":2},"id":402},{"required":0,"data":{"type":10},"id":410},{"required":0,"data":{"type":1},"id":401},{"required":0,"img":{"type":1},"id":201},{"required":0,"img":{"type":3},"id":203},{"required":0,"data":{"type":11},"id":411},{"required":0,"data":{"type":12},"id":412},{"required":0,"data":{"type":3},"id":403},{"required":0,"data":{"type":5},"id":405},{"required":0,"data":{"type":4},"id":404},{"required":0,"data":{"type":6},"id":406},{"required":0,"data":{"type":7},"id":407},{"required":0,"data":{"type":9},"id":409},{"required":0,"data":{"type":8},"id":408}],"ver":"1.2","eventtrackers":[{"event":1,"methods":[1,2]}],"privacy":1}', ver: '1.2'});
->>>>>>> Stashed changes
+      expect(nativeImpression.native).to.deep.equal({request: '{"ver":"1.2","assets":[{"id":0,"required":0,"title":{"len":140}},{"id":1,"required":0,"data":{"type":2}},{"id":2,"required":0,"data":{"type":10}},{"id":3,"required":0,"data":{"type":1}},{"id":4,"required":0,"img":{"type":1}},{"id":5,"required":0,"img":{"type":3}},{"id":6,"required":0},{"id":7,"required":0,"data":{"type":11}},{"id":8,"required":0},{"id":9,"required":0},{"id":10,"required":0,"data":{"type":12}},{"id":11,"required":0,"data":{"type":3}},{"id":12,"required":0,"data":{"type":5}},{"id":13,"required":0,"data":{"type":4}},{"id":14,"required":0,"data":{"type":6}},{"id":15,"required":0,"data":{"type":7}},{"id":16,"required":0,"data":{"type":9}},{"id":17,"required":0,"data":{"type":8}}],"eventtrackers":[{"event":1,"methods":[1,2]}],"privacy":1}', ver: '1.2'});
     })
   });
 
@@ -2674,18 +2656,6 @@ describe('IndexexchangeAdapter', function () {
         expect(videoImp.video.w).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].params.size[0]);
         expect(videoImp.video.h).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].params.size[1]);
       });
-<<<<<<< Updated upstream
-=======
-
-      it('should get missing sizes count 0 when params.size not used', function () {
-        const bid = utils.deepClone(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0]);
-        delete bid.params.size;
-        const request = spec.buildRequests([bid], {});
-        const diagObj = extractPayload(request[0]).ext.ixdiag;
-        expect(diagObj.msd).to.equal(0);
-        expect(diagObj.msi).to.equal(0);
-      });
->>>>>>> Stashed changes
     });
 
     describe('both banner and video bidder params set', function () {
