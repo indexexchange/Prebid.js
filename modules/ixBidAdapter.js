@@ -869,9 +869,12 @@ function buildRequest(validBidRequests, bidderRequest, impressions, version) {
       clonedPayload.r = JSON.stringify(r);
 
       requests.push({
-        method: 'GET',
-        url: baseUrl,
-        data: clonedPayload,
+        method: 'POST',
+        url: baseUrl + '?s=' + siteID,
+        data: deepClone(r),
+        option: {
+          contentType: 'text/plain',
+        },
         validBidRequests
       });
 
@@ -1461,7 +1464,7 @@ export const spec = {
 
       // Transform rawBid in bid response to the format that will be accepted by prebid.
       const innerBids = seatbid[i].bid;
-      let requestBid = JSON.parse(bidderRequest.data.r);
+      let requestBid = bidderRequest.data;
 
       for (let j = 0; j < innerBids.length; j++) {
         const bidRequest = getBidRequest(innerBids[j].impid, requestBid.imp, bidderRequest.validBidRequests);
