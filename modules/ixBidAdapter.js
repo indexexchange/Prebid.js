@@ -23,6 +23,7 @@ import { registerBidder } from '../src/adapters/bidderFactory.js';
 import { INSTREAM, OUTSTREAM } from '../src/video.js';
 import { Renderer } from '../src/Renderer.js';
 import {getGptSlotInfoForAdUnitCode} from '../libraries/gptUtils/gptUtils.js';
+import { buildRequestsORTBConverter, interpretResponseORTBConverter } from '../libraries/ixUtils/ixUtils.js';
 
 const divIdCache = {};
 
@@ -82,11 +83,14 @@ export const LOCAL_STORAGE_FEATURE_TOGGLES_KEY = `${BIDDER_CODE}_features`;
 export const storage = getStorageManager({ bidderCode: BIDDER_CODE });
 export const FEATURE_TOGGLES = {
   // Update with list of CFTs to be requested from Exchange
-  REQUESTED_FEATURE_TOGGLES: [],
+  REQUESTED_FEATURE_TOGGLES: ['pbjs_enable_ortbconverter'],
 
   featureToggles: {},
   isFeatureEnabled: function (ft) {
     return deepAccess(this.featureToggles, `features.${ft}.activated`, false)
+  },
+  hasFeature: function (ft) {
+    return !!deepAccess(this.featureToggles, `features.${ft}`);
   },
   getFeatureToggles: function () {
     if (storage.localStorageIsEnabled()) {
@@ -1296,6 +1300,10 @@ function buildIXDiag(validBidRequests, fledgeEnabled) {
     eidLength: allEids.length
   };
 
+  if (FEATURE_TOGGLES.hasFeature('pbjs_enable_ortbconverter') && !FEATURE_TOGGLES.isFeatureEnabled('pbjs_enable_ortbconverter')) {
+    ixdiag.version = `${ixdiag.version}-ortb-disabled`;
+  }
+
   // create ad unit map and collect the required diag properties
   for (const adUnit of adUnitMap) {
     const bid = validBidRequests.filter(bidRequest => bidRequest.adUnitCode === adUnit)[0];
@@ -1695,6 +1703,11 @@ export const spec = {
     const missingBannerSizes = {}; // To capture the missing sizes i.e not configured for ix
     FEATURE_TOGGLES.getFeatureToggles();
 
+    if (FEATURE_TOGGLES.isFeatureEnabled('pbjs_enable_ortbconverter')) {
+      siteID = deepAccess(validBidRequests, '0.params.siteId', 0);
+      return buildRequestsORTBConverter(validBidRequests, bidderRequest);
+    }
+
     // Step 1: Create impresssions from IX params
     validBidRequests.forEach((validBidRequest) => {
       const adUnitMediaTypes = Object.keys(deepAccess(validBidRequest, 'mediaTypes', {}));
@@ -1763,6 +1776,10 @@ export const spec = {
    * @return {Array}                 An array of bids which were nested inside the server.
    */
   interpretResponse: function (serverResponse, bidderRequest) {
+    if (FEATURE_TOGGLES.isFeatureEnabled('pbjs_enable_ortbconverter')) {
+      return interpretResponseORTBConverter(serverResponse, bidderRequest);
+    }
+
     const bids = [];
     let bid = null;
 
