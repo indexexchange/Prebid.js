@@ -1,4 +1,4 @@
-## 🧩 Option 1 – Replace IX Files in Your Local Prebid.js Build
+## 🧩 Replace IX Files in Your Local Prebid.js Build
 
 Follow these steps if you maintain your own local Prebid.js build and want to test the latest Index Exchange adapter changes with ORTB Converter support.
 
@@ -43,11 +43,14 @@ Use the newly built Prebid.js file on your test page in place of your existing b
 
 
 ### ✅ Verification
-You can confirm which path is active by checking the outgoing bid requests in your browser’s network tab.
+To verify the correct integration, inspect outgoing bid requests in your browser’s network tab.
+Check the `ext.ixdiag.version` field in the request payload:
 
 | Mode | Example `prebidjs_version` |
 |------|-----------------------------|
 | Legacy | `10.0.1-legacy` |
 | ORTB Converter | `10.0.1-ortb` |
 
-When the ORTB Converter is enabled, you should see `-ortb` appended to the version string in your Index Exchange bid requests.
+When the ORTB Converter is active, the version string will include -ortb.
+
+**Note: Please contact Index Exchange to enable the new ORTB Converter flow.**
