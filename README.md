@@ -49,7 +49,7 @@ Check the `ext.ixdiag.version` field in the request payload:
 | Mode | Example `prebidjs_version` |
 |------|-----------------------------|
 | Legacy | `10.0.1-ortb-disabled` |
-| ORTB Converter | `10.0.1-enabled` |
+| ORTB Converter | `10.0.1-ortb-enabled` |
 
 When the ORTB Converter is active, the version string will include -ortb.
 
