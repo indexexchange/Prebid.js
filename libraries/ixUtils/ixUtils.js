@@ -547,7 +547,7 @@ function buildIXDiag(validBidRequests, bidderRequest, imps) {
     imps: imps.length
   };
 
-  ixdiag.version = `${/^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '0.0.0'}-ortb-enabled`;
+  ixdiag.version = `${/^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '10.16.0'}-ortb-enabled`;
   const firstBid = validBidRequests && validBidRequests[0];
   if (firstBid) {
     if (firstBid.params && firstBid.params.tagId) ixdiag.tagid = firstBid.params.tagId;

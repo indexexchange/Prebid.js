@@ -1301,7 +1301,7 @@ function buildIXDiag(validBidRequests, fledgeEnabled) {
   };
 
   if (FEATURE_TOGGLES.hasFeature('pbjs_enable_ortbconverter') && !FEATURE_TOGGLES.isFeatureEnabled('pbjs_enable_ortbconverter')) {
-    ixdiag.version = `${/^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '0.0.0'}-ortb-disabled`;
+    ixdiag.version = `${/^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '10.16.0'}-ortb-disabled`;
   }
 
   // create ad unit map and collect the required diag properties
