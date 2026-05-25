@@ -515,7 +515,7 @@ export function buildRequestsORTBConverter(validBidRequests, bidderRequest) {
   if (isExchangeIdConfigured()) params.set('p', config.getConfig('exchangeId'));
   const exchangeURL = `${SECURE_BID_URL}?${params.toString()}`;
 
-  return { method: 'POST', url: exchangeURL, data: r, options: { contentType: 'text/plain' } };
+  return { method: 'POST', url: exchangeURL, data: r, options: { contentType: 'text/plain', withCredentials: true } };
 }
 
 /**
