@@ -1300,8 +1300,11 @@ function buildIXDiag(validBidRequests, fledgeEnabled) {
     eidLength: allEids.length
   };
 
-  if (FEATURE_TOGGLES.hasFeature('pbjs_enable_ortbconverter') && !FEATURE_TOGGLES.isFeatureEnabled('pbjs_enable_ortbconverter')) {
-    ixdiag.version = `${/^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '10.17.0'}-ortb-disabled`;
+  const prebidVersion = /^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '10.18.0';
+  if (!FEATURE_TOGGLES.hasFeature('pbjs_enable_ortbconverter')) {
+    ixdiag.version = `${prebidVersion}-ortb-default`;
+  } else if (!FEATURE_TOGGLES.isFeatureEnabled('pbjs_enable_ortbconverter')) {
+    ixdiag.version = `${prebidVersion}-ortb-disabled`;
   }
 
   // create ad unit map and collect the required diag properties

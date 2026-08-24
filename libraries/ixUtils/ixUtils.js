@@ -547,7 +547,7 @@ function buildIXDiag(validBidRequests, bidderRequest, imps) {
     imps: imps.length
   };
 
-  ixdiag.version = `${/^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '10.17.0'}-ortb-enabled`;
+  ixdiag.version = `${/^\d+\.\d+\.\d+/.test('$prebid.version$') ? '$prebid.version$' : '10.18.0'}-ortb-enabled`;
   const firstBid = validBidRequests && validBidRequests[0];
   if (firstBid) {
     if (firstBid.params && firstBid.params.tagId) ixdiag.tagid = firstBid.params.tagId;
@@ -802,7 +802,7 @@ export function applyFloors(imp, bidRequest) {
       deepSetValue(imp, 'video.ext.bidfloor', picked.floor);
       deepSetValue(imp, 'video.ext.bidfloorcur', picked.currency);
       deepSetValue(imp, 'video.ext.fl', picked.source);
-      if (typeof imp.bidfloor === 'number' && picked.floor < imp.bidfloor) {
+      if (typeof imp.bidfloor !== 'number' || picked.floor < imp.bidfloor) {
         imp.bidfloor = picked.floor;
         imp.bidfloorcur = picked.currency;
       }
@@ -817,7 +817,7 @@ export function applyFloors(imp, bidRequest) {
       deepSetValue(imp, 'native.ext.bidfloor', picked.floor);
       deepSetValue(imp, 'native.ext.bidfloorcur', picked.currency);
       deepSetValue(imp, 'native.ext.fl', picked.source);
-      if (typeof imp.bidfloor === 'number' && picked.floor < imp.bidfloor) {
+      if (typeof imp.bidfloor !== 'number' || picked.floor < imp.bidfloor) {
         imp.bidfloor = picked.floor;
         imp.bidfloorcur = picked.currency;
       }

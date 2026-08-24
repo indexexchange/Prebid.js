@@ -3485,7 +3485,7 @@ describe('IndexexchangeAdapter', function () {
         expect(diag.ren).to.equal(true);
         expect(diag.mfu).to.equal(2);
         expect(diag.allu).to.equal(2);
-        expect(diag.version).to.equal('$prebid.version$');
+        expect(diag.version).to.match(/-ortb-default$/);
         expect(diag.url).to.equal('http://localhost:9876/context.html');
         expect(diag.tagid).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].params.tagId);
         expect(diag.adunitcode).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].adUnitCode);
@@ -4645,7 +4645,32 @@ describe('IndexexchangeAdapter', function () {
         }
       };
       localStorageValues = {};
+      FEATURE_TOGGLES.featureToggles = {};
       sandbox.restore();
+    });
+
+    it('should report ortb-default for a cold start with no converter assignment', () => {
+      sandbox.stub(storage, 'localStorageIsEnabled').returns(false);
+      FEATURE_TOGGLES.featureToggles = {};
+
+      const bid = utils.deepClone(DEFAULT_BANNER_VALID_BID[0]);
+      const request = spec.buildRequests([bid], DEFAULT_OPTION)[0];
+      const diag = extractPayload(request).ext.ixdiag;
+
+      expect(diag.version).to.match(/-ortb-default$/);
+    });
+
+    it('should report ortb-disabled when the converter assignment is explicitly false', () => {
+      sandbox.stub(storage, 'localStorageIsEnabled').returns(false);
+      FEATURE_TOGGLES.featureToggles = {
+        features: { pbjs_enable_ortbconverter: { activated: false } }
+      };
+
+      const bid = utils.deepClone(DEFAULT_BANNER_VALID_BID[0]);
+      const request = spec.buildRequests([bid], DEFAULT_OPTION)[0];
+      const diag = extractPayload(request).ext.ixdiag;
+
+      expect(diag.version).to.match(/-ortb-disabled$/);
     });
 
     it('should store features in internal cache', () => {

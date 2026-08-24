@@ -474,9 +474,8 @@ describe('ixUtils (ORTB Converter Integration)', function() {
       expect(imp.video.ext && imp.video.ext.bidfloor).to.equal(3.2);
       expect((imp.video.ext && imp.video.ext.bidfloorcur) || imp.bidfloorcur || 'USD').to.equal('USD');
 
-      if (typeof imp.bidfloor !== 'undefined') {
-        expect(imp.bidfloor).to.equal(3.2);
-      }
+      expect(imp.bidfloor).to.equal(3.2);
+      expect(imp.bidfloorcur).to.equal('USD');
     });
   });
 });
@@ -805,6 +804,45 @@ describe('ixUtils (ORTB Converter Integration) — continued', function() {
       expect(imp.ext.fl).to.equal(IX);
     });
 
+    it('video: writes media floor and creates imp.bidfloor when none exists', () => {
+      const imp = makeImpVideo({ w: 640, h: 360 });
+
+      const bidRequest = {
+        params: { bidFloor: 4.00, bidFloorCur: 'USD' },
+        getFloor({ mediaType }) {
+          if (mediaType === 'video') return { floor: 5.00, currency: 'USD' };
+          return null;
+        }
+      };
+
+      applyFloors(imp, bidRequest);
+
+      expect(imp.video.ext).to.include({
+        bidfloor: 5.00,
+        bidfloorcur: 'USD',
+        fl: PBJS
+      });
+      expect(imp.bidfloor).to.equal(5.00);
+      expect(imp.bidfloorcur).to.equal('USD');
+    });
+
+    it('video: uses adapter floor for imp.bidfloor when priceFloors module is unavailable', () => {
+      const imp = makeImpVideo({ w: 640, h: 360 });
+      const bidRequest = {
+        params: { bidFloor: 4.25, bidFloorCur: 'USD' }
+      };
+
+      applyFloors(imp, bidRequest);
+
+      expect(imp.video.ext).to.include({
+        bidfloor: 4.25,
+        bidfloorcur: 'USD',
+        fl: IX
+      });
+      expect(imp.bidfloor).to.equal(4.25);
+      expect(imp.bidfloorcur).to.equal('USD');
+    });
+
     it('video: write media floor and only lower existing imp.bidfloor when lower', () => {
       const imp = makeImpVideo({ w: 640, h: 360 });
       imp.bidfloor = 6.00;
@@ -854,7 +892,7 @@ describe('ixUtils (ORTB Converter Integration) — continued', function() {
       expect(imp.bidfloorcur).to.equal('USD');
     });
 
-    it('native: writes media floor but does not force-create imp.bidfloor when none exists', () => {
+    it('native: writes media floor and creates imp.bidfloor when none exists', () => {
       const imp = makeImpNative();
 
       const bidRequest = {
@@ -872,8 +910,25 @@ describe('ixUtils (ORTB Converter Integration) — continued', function() {
         fl: PBJS
       });
 
-      expect(imp.bidfloor).to.be.undefined;
-      expect(imp.bidfloorcur).to.be.undefined;
+      expect(imp.bidfloor).to.equal(0.50);
+      expect(imp.bidfloorcur).to.equal('USD');
+    });
+
+    it('native: uses adapter floor for imp.bidfloor when priceFloors module is unavailable', () => {
+      const imp = makeImpNative();
+      const bidRequest = {
+        params: { bidFloor: 0.75, bidFloorCur: 'USD' }
+      };
+
+      applyFloors(imp, bidRequest);
+
+      expect(imp.native.ext).to.include({
+        bidfloor: 0.75,
+        bidfloorcur: 'USD',
+        fl: IX
+      });
+      expect(imp.bidfloor).to.equal(0.75);
+      expect(imp.bidfloorcur).to.equal('USD');
     });
 
     it('native: lowers existing imp.bidfloor when native floor is lower', () => {
