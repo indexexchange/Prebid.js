@@ -13,18 +13,35 @@ import {
   isPlainObject,
   logError,
   logWarn,
-  mergeDeep,
-  safeJSONParse
+  mergeDeep
 } from '../src/utils.js';
 import { BANNER, VIDEO, NATIVE } from '../src/mediaTypes.js';
 import { config } from '../src/config.js';
-import { getStorageManager } from '../src/storageManager.js';
 import { registerBidder } from '../src/adapters/bidderFactory.js';
 import { INSTREAM, OUTSTREAM } from '../src/video.js';
 import { Renderer } from '../src/Renderer.js';
 import { getGptSlotInfoForAdUnitCode } from '../libraries/gptUtils/gptUtils.js';
+import {
+  buildRequestsORTBConverter,
+  FEATURE_TOGGLES,
+  getIXDiagVersion,
+  getOrtbConverterState,
+  interpretResponseORTBConverter,
+  LOCAL_STORAGE_FEATURE_TOGGLES_KEY,
+  storage
+} from '../libraries/ixUtils/ixUtils.js';
+
+export { FEATURE_TOGGLES, LOCAL_STORAGE_FEATURE_TOGGLES_KEY, storage };
 
 const divIdCache = {};
+
+/**
+ * Responses must be parsed with the same path that built their request.
+ * The global FT only selects future requests and may change while requests are in flight.
+ */
+export function isOrtbConverterRequest(request) {
+  return request?.ixOrtbConverter === true;
+}
 
 export function getDivIdFromAdUnitCode(adUnitCode) {
   if (divIdCache[adUnitCode]) {
@@ -78,48 +95,6 @@ const VIDEO_PARAMS_ALLOW_LIST = [
   'playerSize', 'w', 'h', 'plcmt'
 ];
 const LOCAL_STORAGE_KEY = 'ixdiag';
-export const LOCAL_STORAGE_FEATURE_TOGGLES_KEY = `${BIDDER_CODE}_features`;
-export const storage = getStorageManager({ bidderCode: BIDDER_CODE });
-export const FEATURE_TOGGLES = {
-  // Update with list of CFTs to be requested from Exchange
-  REQUESTED_FEATURE_TOGGLES: [],
-
-  featureToggles: {},
-  isFeatureEnabled: function (ft) {
-    return deepAccess(this.featureToggles, `features.${ft}.activated`, false)
-  },
-  getFeatureToggles: function () {
-    if (storage.localStorageIsEnabled()) {
-      const parsedToggles = safeJSONParse(storage.getDataFromLocalStorage(LOCAL_STORAGE_FEATURE_TOGGLES_KEY));
-      if (deepAccess(parsedToggles, 'expiry') && parsedToggles.expiry >= new Date().getTime()) {
-        this.featureToggles = parsedToggles
-      } else {
-        this.clearFeatureToggles();
-      }
-    }
-  },
-  setFeatureToggles: function (serverResponse) {
-    const responseBody = serverResponse.body;
-    const expiryTime = new Date();
-    const toggles = deepAccess(responseBody, 'ext.features');
-
-    if (toggles) {
-      this.featureToggles = {
-        expiry: expiryTime.setHours(expiryTime.getHours() + 1),
-        features: toggles
-      }
-      if (storage.localStorageIsEnabled()) {
-        storage.setDataInLocalStorage(LOCAL_STORAGE_FEATURE_TOGGLES_KEY, JSON.stringify(this.featureToggles));
-      }
-    }
-  },
-  clearFeatureToggles: function () {
-    this.featureToggles = {};
-    if (storage.localStorageIsEnabled()) {
-      storage.removeDataFromLocalStorage(LOCAL_STORAGE_FEATURE_TOGGLES_KEY);
-    }
-  }
-};
 let siteID = 0;
 let gdprConsent = '';
 let usPrivacy = '';
@@ -662,11 +637,11 @@ function getEidInfo(allEids) {
  * @param  {Array}  validBidRequests A list of valid bid request config objects.
  * @param  {object} bidderRequest    An object containing other info like gdprConsent.
  * @param  {object} impressions      An object containing a list of impression objects describing the bids for each transaction
- * @param  {Array}  version          Endpoint version denoting banner, video or native.
+ * @param  {object} ortbState        Request-build snapshot of the ORTB Converter feature state.
  * @return {Array}                   List of objects describing the request to the server.
  *
  */
-function buildRequest(validBidRequests, bidderRequest, impressions, version) {
+function buildRequest(validBidRequests, bidderRequest, impressions, ortbState) {
   // Always use secure HTTPS protocol.
   const baseUrl = SECURE_BID_URL;
   // Get ids from Prebid User ID Modules
@@ -683,11 +658,11 @@ function buildRequest(validBidRequests, bidderRequest, impressions, version) {
   let r = createRequest(validBidRequests);
 
   // Add FTs to be requested from Exchange
-  r = addRequestedFeatureToggles(r, FEATURE_TOGGLES.REQUESTED_FEATURE_TOGGLES)
+  r = addRequestedFeatureToggles(r, FEATURE_TOGGLES.REQUESTED_FEATURE_TOGGLES, ortbState)
 
   // getting ixdiags for adunits of the video, outstream & multi format (MF) style
   const fledgeEnabled = deepAccess(bidderRequest, 'paapi.enabled')
-  const ixdiag = buildIXDiag(validBidRequests, fledgeEnabled);
+  const ixdiag = buildIXDiag(validBidRequests, fledgeEnabled, ortbState);
   for (const key in ixdiag) {
     r.ext.ixdiag[key] = ixdiag[key];
   }
@@ -754,7 +729,8 @@ function buildRequest(validBidRequests, bidderRequest, impressions, version) {
           contentType: 'text/plain',
           withCredentials: true
         },
-        validBidRequests
+        validBidRequests,
+        ixOrtbConverter: false
       });
 
       r.imp = [];
@@ -814,13 +790,16 @@ function createRequest(validBidRequests) {
  * @param {Array} requestedFeatureToggles - The list of feature toggles to add.
  * @returns {object} The updated request object with the added feature toggles.
  */
-function addRequestedFeatureToggles(r, requestedFeatureToggles) {
+function addRequestedFeatureToggles(r, requestedFeatureToggles, ortbState) {
   if (requestedFeatureToggles.length > 0) {
     r.ext.features = {};
-    // Loop through each feature toggle and add it to the features object.
-    // Add current activation status as well.
+    // Use the same request-build snapshot that selected the code path so
+    // reporting cannot drift from this request if another response flips the FT.
     requestedFeatureToggles.forEach(toggle => {
-      r.ext.features[toggle] = { activated: FEATURE_TOGGLES.isFeatureEnabled(toggle) };
+      const activated = toggle === 'pbjs_enable_ortbconverter' && ortbState
+        ? ortbState.enabled
+        : FEATURE_TOGGLES.isFeatureEnabled(toggle);
+      r.ext.features[toggle] = { activated };
     });
   }
   return r;
@@ -1276,7 +1255,7 @@ function addIdentifiersInfo(impressions, r, impKeys, adUnitIndex, payload, baseU
  * @param {boolean} fledgeEnabled - Flag indicating if protected audience (fledge) is enabled
  * @return {Object} IX diag values for ad units
  */
-function buildIXDiag(validBidRequests, fledgeEnabled) {
+function buildIXDiag(validBidRequests, fledgeEnabled, ortbState) {
   var adUnitMap = validBidRequests
     .map(bidRequest => bidRequest.adUnitCode)
     .filter((value, index, arr) => arr.indexOf(value) === index);
@@ -1290,7 +1269,7 @@ function buildIXDiag(validBidRequests, fledgeEnabled) {
     ou: 0,
     allu: 0,
     ren: false,
-    version: '$prebid.version$',
+    version: getIXDiagVersion('$prebid.version$', ortbState),
     url: window.location.href.split('?')[0],
     vpd: defaultVideoPlacement,
     ae: fledgeEnabled,
@@ -1695,6 +1674,14 @@ export const spec = {
     const nativeImps = {}; // Stores created native impressions
     const missingBannerSizes = {}; // To capture the missing sizes i.e not configured for ix
     FEATURE_TOGGLES.getFeatureToggles();
+    // Snapshot the client-side FT once for this request. The snapshot drives
+    // path selection, request reporting, and the response parser marker.
+    const ortbState = getOrtbConverterState();
+
+    if (ortbState.enabled) {
+      siteID = deepAccess(validBidRequests, '0.params.siteId', 0);
+      return buildRequestsORTBConverter(validBidRequests, bidderRequest, ortbState);
+    }
 
     // Step 1: Create impresssions from IX params
     validBidRequests.forEach((validBidRequest) => {
@@ -1751,7 +1738,7 @@ export const spec = {
       allImps.push(nativeImps);
     }
 
-    reqs.push(...buildRequest(validBidRequests, bidderRequest, combineImps(allImps)));
+    reqs.push(...buildRequest(validBidRequests, bidderRequest, combineImps(allImps), ortbState));
 
     return reqs;
   },
@@ -1764,6 +1751,10 @@ export const spec = {
    * @return {Array}                 An array of bids which were nested inside the server.
    */
   interpretResponse: function (serverResponse, bidderRequest) {
+    if (isOrtbConverterRequest(bidderRequest)) {
+      return interpretResponseORTBConverter(serverResponse, bidderRequest);
+    }
+
     const bids = [];
     let bid = null;
 
