@@ -2,7 +2,7 @@
 
 Follow these steps if you maintain your own local Prebid.js build and want to test the latest Index Exchange adapter changes with ORTB Converter support.
 
-These files are for **Prebid.js 9.11.0 – 9.53.5**. Do not copy them into a different Prebid.js version. For Prebid.js 10.x, use the `OrtbConverterSupport-10.29.1` branch instead.
+These files are for **Prebid.js 9.11.0 – 9.53.5**. Do not copy them into a different Prebid.js version. For Prebid.js 10.x, use the `OrtbConverterSupport-10.x` branch instead.
 
 ### 1. Download the Updated Files
 Obtain the following updated files from Index Exchange:
