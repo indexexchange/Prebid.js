@@ -114,13 +114,8 @@ export const converter = ortbConverter({
       }
     }
 
-    // siteID: the media specific params.<mediaType>.siteId, otherwise params.siteId
-    const params = bidRequest.params || {};
-    const mediaSiteId = SUPPORTED_AD_TYPES
-      .map((type) => imp[type] && params[type]?.siteId)
-      .find((id) => id != null && id !== '' && !isNaN(Number(id)));
-    const siteId = mediaSiteId != null ? mediaSiteId : params.siteId;
-    if (siteId) deepSetValue(imp, 'ext.siteID', String(siteId));
+    const siteID = getMediaSiteID(bidRequest.params, SUPPORTED_AD_TYPES.filter((type) => imp[type]));
+    if (siteID) deepSetValue(imp, 'ext.siteID', siteID);
 
     applyFloors(imp, bidRequest);
 
@@ -345,6 +340,17 @@ function getBannerSizes(bidRequest) {
 
 function sameSize(a, b) {
   return Array.isArray(a) && Array.isArray(b) && a[0] === b[0] && a[1] === b[1];
+}
+
+/**
+ * The siteID Legacy sends for an imp. Its first part (banner, video, native) uses its own
+ * params.<mediaType>.siteId, otherwise params.siteId; a later part's siteId only fills a gap.
+ */
+function getMediaSiteID(params = {}, mediaTypes) {
+  const valid = (id) => (id && !isNaN(Number(id)) ? String(id) : null);
+  const [first, ...rest] = mediaTypes;
+  return valid(params[first]?.siteId) || (params.siteId ? String(params.siteId) : null) ||
+    rest.map((type) => valid(params[type]?.siteId)).find(Boolean) || null;
 }
 
 function getBannerSiteID(bidRequest) {
@@ -592,7 +598,7 @@ function buildLegacyAdUnitImps(entries, paapiEnabled) {
     const target = out.find((imp) => imp.id === entry.imp.id);
     if (target) {
       target[part] = entry.imp[part];
-      if (target === bannerImp) mergedSources.push(entry.imp);
+      if (target === bannerImp) mergedSources.push({ entry, part });
       return;
     }
     const imp = { ...entry.imp, ext: { ...(entry.imp.ext || {}) } };
@@ -603,17 +609,25 @@ function buildLegacyAdUnitImps(entries, paapiEnabled) {
     // The module's imp.bidfloor priced the whole multi format bid; this imp takes its part's floor.
     delete imp.bidfloor;
     delete imp.bidfloorcur;
+    // Legacy builds this imp per media type, so it carries that media type's siteID
+    const siteID = getMediaSiteID(entry.bidRequest.params, [part]);
+    if (siteID) imp.ext.siteID = siteID;
+    else delete imp.ext.siteID;
     imp[part] = entry.imp[part];
     out.push(imp);
   });
 
   if (mergedSources.length > 0) {
-    // Multi format imp (Legacy removeSiteIDs): siteID moves from banner.format[].ext to imp.ext.
-    const source = mergedSources[0];
-    let siteID = deepAccess(source, 'ext.siteID');
+    // Multi format imp, as Legacy builds it: the first merged part's siteID goes on imp.ext, sizes
+    // repeating it drop theirs (deduplicateImpExtFields), then the last size that still has a siteID
+    // wins (removeSiteIDs). No banner.format[].ext.siteID is sent.
+    const { entry: sourceEntry, part: sourcePart } = mergedSources[0];
+    const source = sourceEntry.imp;
+    const partSiteID = getMediaSiteID(sourceEntry.bidRequest.params, [sourcePart]);
+    let siteID = partSiteID;
     bannerImp.banner.format = bannerImp.banner.format.map((format) => {
       if (format.ext?.siteID == null) return format;
-      siteID = format.ext.siteID;
+      if (format.ext.siteID !== partSiteID) siteID = format.ext.siteID;
       const stripped = { ...format, ext: { ...format.ext } };
       delete stripped.ext.siteID;
       if (Object.keys(stripped.ext).length === 0) delete stripped.ext;
@@ -621,6 +635,7 @@ function buildLegacyAdUnitImps(entries, paapiEnabled) {
     });
     bannerImp.ext = { ...(source.ext || {}), ...(bannerImp.ext || {}) };
     if (siteID != null) bannerImp.ext.siteID = siteID;
+    else delete bannerImp.ext.siteID;
   }
 
   return out;
@@ -916,7 +931,7 @@ export const FEATURE_TOGGLES = {
   },
 };
 
-const ORTB_CONVERTER_DIAG_VERSION = 2;
+const ORTB_CONVERTER_DIAG_VERSION = 3;
 const ORTB_CONVERTER_FEATURE = 'pbjs_enable_ortbconverter';
 
 /**
@@ -939,9 +954,9 @@ export function getOrtbConverterState() {
  * and the diagnostics format version.
  *
  * Examples:
- * - 11.13.0-ortb-enabled-2
- * - 11.13.0-ortb-disabled-2
- * - 11.13.0-ortb-default-2
+ * - 11.13.0-ortb-enabled-3
+ * - 11.13.0-ortb-disabled-3
+ * - 11.13.0-ortb-default-3
  */
 export function getIXDiagVersion(baseVersion = '$prebid.version$', ortbState = getOrtbConverterState()) {
   // Same fallback as the original branch when the build placeholder is not replaced.

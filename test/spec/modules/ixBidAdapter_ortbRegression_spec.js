@@ -42,21 +42,21 @@ describe('IX ORTB converter regression coverage', function () {
   describe('ixdiag cohort version', function () {
     it('reports default when the ORTB converter feature has not been assigned', function () {
       FEATURE_TOGGLES.featureToggles = {};
-      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-default-2');
+      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-default-3');
     });
 
     it('reports disabled for an explicit control assignment', function () {
       FEATURE_TOGGLES.featureToggles = {
         features: { pbjs_enable_ortbconverter: { activated: false } }
       };
-      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-disabled-2');
+      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-disabled-3');
     });
 
     it('reports enabled for an explicit treatment assignment', function () {
       FEATURE_TOGGLES.featureToggles = {
         features: { pbjs_enable_ortbconverter: { activated: true } }
       };
-      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-enabled-2');
+      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-enabled-3');
     });
 
     it('keeps the version tied to the request-build snapshot after the global FT flips', function () {
@@ -70,8 +70,8 @@ describe('IX ORTB converter regression coverage', function () {
       };
 
       expect(requestState.enabled).to.equal(true);
-      expect(getIXDiagVersion('11.13.0', requestState)).to.equal('11.13.0-ortb-enabled-2');
-      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-disabled-2');
+      expect(getIXDiagVersion('11.13.0', requestState)).to.equal('11.13.0-ortb-enabled-3');
+      expect(getIXDiagVersion('11.13.0')).to.equal('11.13.0-ortb-disabled-3');
     });
   });
 
@@ -391,13 +391,13 @@ describe('IX ORTB converter regression coverage', function () {
       { name: 'FT false', toggles: { features: { [ORTB]: { activated: false } } }, ortb: false, activated: false, cohort: 'disabled' },
       { name: 'FT true', toggles: { features: { [ORTB]: { activated: true } } }, ortb: true, activated: true, cohort: 'enabled' }
     ].forEach(({ name, toggles, ortb, activated, cohort }) => {
-      it(`${name}: ${ortb ? 'ORTB' : 'Legacy'} path, activated=${activated}, -ortb-${cohort}-2`, function () {
+      it(`${name}: ${ortb ? 'ORTB' : 'Legacy'} path, activated=${activated}, -ortb-${cohort}-3`, function () {
         FEATURE_TOGGLES.featureToggles = toggles;
         const req = build();
 
         expect(req.ixOrtbConverter).to.equal(ortb);
         expect(req.data.ext.features[ORTB].activated).to.equal(activated);
-        expect(req.data.ext.ixdiag.version).to.match(new RegExp(`-ortb-${cohort}-2$`));
+        expect(req.data.ext.ixdiag.version).to.match(new RegExp(`-ortb-${cohort}-3$`));
       });
     });
   });
@@ -1071,7 +1071,7 @@ describe('IX ORTB converter regression coverage', function () {
 
     // Every accepted ORTB vs Legacy difference, with the reason. Anything else fails the test.
     const ACCEPTED = [
-      [/^\.ext\.ixdiag\.version$/, 'cohort suffix -ortb-enabled-2 vs -ortb-disabled-2'],
+      [/^\.ext\.ixdiag\.version$/, 'cohort suffix -ortb-enabled-3 vs -ortb-disabled-3'],
       [/^\.ext\.features\.pbjs_enable_ortbconverter\.activated$/, 'reports which path built the request'],
       [/^\.ext\.ixdiag\.userIds$/, 'ORTB-only diagnostic (Prebid user ID module names); no Legacy counterpart'],
       [/^\.ext\.ixdiag\.vpd$/, 'Legacy flag is sticky across auctions; ORTB reports the current request'],
@@ -1357,6 +1357,102 @@ describe('IX ORTB converter regression coverage', function () {
     afterEach(function () {
       FEATURE_TOGGLES.REQUESTED_FEATURE_TOGGLES = savedRequested;
     });
+
+    if (FEATURES.VIDEO && FEATURES.NATIVE) {
+      it('sends each media type\'s own siteID like Legacy (merged imp and separate video/native imp)', function () {
+        const NATIVE = { ver: '1.2', assets: [{ id: 1, required: 1, title: { len: 25 } }] };
+        const params = { banner: { siteId: '201' }, video: { siteId: '202' }, native: { siteId: '203' } };
+        const entry = (id, size) => ixBid(id, 'mf', { banner: { sizes: [[300, 250], [728, 90]] }, video: VIDEO, native: {} },
+          { size, ...params }, { nativeOrtbRequest: JSON.parse(JSON.stringify(NATIVE)) });
+        const sites = (data) => data.imp.map((imp) => ({
+          id: imp.id,
+          media: ['banner', 'video', 'native'].filter((m) => imp[m]),
+          siteID: imp.ext && imp.ext.siteID,
+          formats: imp.banner && imp.banner.format.map((f) => f.ext && f.ext.siteID)
+        }));
+
+        // one IX entry: a single multi format imp, sent with one siteID
+        const merged = () => [entry('A', [300, 250])];
+        expect(sites(build(true, merged()))).to.deep.equal(sites(build(false, merged())));
+
+        // two IX entries: banner imp (A) plus a separate video/native imp (B) carrying the video siteID
+        const split = () => [entry('A', [300, 250]), entry('B', [728, 90])];
+        const ortb = sites(build(true, split()));
+        expect(ortb).to.deep.equal(sites(build(false, split())));
+        expect(ortb[1]).to.deep.include({ id: 'B', siteID: '202' });
+      });
+    }
+
+    if (FEATURES.VIDEO && FEATURES.NATIVE) {
+      it('picks the imp siteID like Legacy: the first part decides, a later part only fills a gap', function () {
+        const NATIVE = { ver: '1.2', assets: [{ id: 1, required: 1, title: { len: 25 } }] };
+        const MEDIA = {
+          videoNative: { video: VIDEO, native: {} },
+          bannerNative: { banner: { sizes: [[300, 250]] }, native: {} },
+          bannerVideo: { banner: { sizes: [[300, 250]] }, video: VIDEO },
+          native: { native: {} },
+          video: { video: VIDEO }
+        };
+        const CASES = [
+          ['videoNative', { siteId: '100' }, '100'],
+          ['videoNative', { siteId: '100', video: { siteId: '200' } }, '200'],
+          ['videoNative', { siteId: '100', native: { siteId: '300' } }, '100'],
+          ['videoNative', { siteId: '100', video: { siteId: '200' }, native: { siteId: '300' } }, '200'],
+          ['bannerNative', { siteId: '100', size: [300, 250], native: { siteId: '300' } }, '100'],
+          ['bannerVideo', { siteId: '100', size: [300, 250], video: { siteId: '200' } }, '100'],
+          ['native', { siteId: '100', native: { siteId: '300' } }, '300'],
+          ['video', { siteId: '100', video: { siteId: '200' } }, '200']
+        ];
+        const siteOf = (data) => data.imp.map((imp) => imp.ext && imp.ext.siteID);
+        CASES.forEach(([media, params, expected]) => {
+          const make = () => {
+            const mediaTypes = JSON.parse(JSON.stringify(MEDIA[media]));
+            return [ixBid('A', 'slot', mediaTypes, params, mediaTypes.native ? { nativeOrtbRequest: JSON.parse(JSON.stringify(NATIVE)) } : {})];
+          };
+          const legacy = siteOf(build(false, make()));
+          const ortb = siteOf(build(true, make()));
+          const label = `${media} ${JSON.stringify(params)}`;
+          expect(ortb, label).to.deep.equal(legacy);
+          expect(ortb[0], label).to.equal(expected);
+        });
+      });
+    }
+
+    if (FEATURES.VIDEO) {
+      it('merged banner + video imp takes its siteID like Legacy: the last size siteID that differs from the video part, else the video part', function () {
+        // video is only valid on the first entry (params.video adds mimes), so it merges into the banner imp
+        const video = { context: 'instream', playerSize: [[640, 360]], protocols: [2, 3], minduration: 5, maxduration: 30 };
+        const media = { banner: { sizes: [[320, 100], [300, 250], [728, 90]] }, video };
+        const make = () => [
+          ixBid('A', 'mf', media, { siteId: '1098', size: [320, 100], video: { mimes: ['video/mp4'] } }),
+          ixBid('B', 'mf', media, { siteId: '1194', size: [300, 250] })
+        ];
+        const sites = (data) => data.imp.map((imp) => ({ id: imp.id, parts: ['banner', 'video'].filter((m) => imp[m]), siteID: imp.ext && imp.ext.siteID }));
+        const legacy = sites(build(false, make()));
+        const ortb = sites(build(true, make()));
+        expect(ortb).to.deep.equal(legacy);
+        // 728x90 has no IX entry; it inherits the first entry's site but does not decide the imp siteID
+        expect(ortb[0]).to.deep.equal({ id: 'A', parts: ['banner', 'video'], siteID: '1194' });
+
+        // the video part's own siteID wins when no size has a different one (a size without an entry copies the first entry)
+        const same = () => [
+          ixBid('A', 'mf', media, { siteId: '1098', size: [320, 100], video: { mimes: ['video/mp4'] } }),
+          ixBid('B', 'mf', media, { siteId: '1098', size: [300, 250] })
+        ];
+        const legacySame = sites(build(false, same()));
+        expect(sites(build(true, same()))).to.deep.equal(legacySame);
+        expect(legacySame[0]).to.deep.equal({ id: 'A', parts: ['banner', 'video'], siteID: '1098' });
+
+        // a size siteID equal to the video part's siteID is dropped first, so a later size with params.banner.siteId does not win
+        const videoMedia = { banner: { sizes: [[1, 1], [300, 600]] }, video: VIDEO };
+        const sized = () => [
+          ixBid('A', 'mf', videoMedia, { siteId: '1922' }),
+          ixBid('B', 'mf', videoMedia, { siteId: '1182', size: [300, 600], banner: { siteId: '2047' } })
+        ];
+        const legacySized = sites(build(false, sized()));
+        expect(sites(build(true, sized()))).to.deep.equal(legacySized);
+      });
+    }
 
     it('does not send banner.ext (params.banner.siteId stays on the format), like Legacy', function () {
       const make = () => [

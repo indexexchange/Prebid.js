@@ -52,10 +52,10 @@ Check the `ext.ixdiag.version` field in the request payload:
 
 | Mode                    | Example `ext.ixdiag.version` |
 | ----------------------- | ---------------------------- |
-| Cold Start / Unassigned | `10.29.1-ortb-default-2`     |
-| Legacy                  | `10.29.1-ortb-disabled-2`    |
-| ORTB Converter          | `10.29.1-ortb-enabled-2`     |
+| Cold Start / Unassigned | `10.29.1-ortb-default-3`     |
+| Legacy                  | `10.29.1-ortb-disabled-3`    |
+| ORTB Converter          | `10.29.1-ortb-enabled-3`     |
 
-If the version string includes `-ortb-`, the updated adapter is installed. The ORTB Converter is active when it ends in `-ortb-enabled-2`.
+If the version string includes `-ortb-`, the updated adapter is installed. The ORTB Converter is active when it ends in `-ortb-enabled-3`.
 
 **Note: Please contact Index Exchange to enable the new ORTB Converter flow.**
