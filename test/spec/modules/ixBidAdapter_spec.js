@@ -3398,7 +3398,7 @@ describe('IndexexchangeAdapter', function () {
         expect(diag.ren).to.equal(true);
         expect(diag.mfu).to.equal(2);
         expect(diag.allu).to.equal(2);
-        expect(diag.version).to.match(/-ortb-default-2$/);
+        expect(diag.version).to.match(/-ortb-default-3$/);
         expect(diag.url).to.equal('http://localhost:9876/context.html');
         expect(diag.tagid).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].params.tagId);
         expect(diag.adunitcode).to.equal(DEFAULT_MULTIFORMAT_VIDEO_VALID_BID[0].adUnitCode);
@@ -4570,7 +4570,7 @@ describe('IndexexchangeAdapter', function () {
       const request = spec.buildRequests([bid], DEFAULT_OPTION)[0];
       const diag = extractPayload(request).ext.ixdiag;
 
-      expect(diag.version).to.match(/-ortb-default-2$/);
+      expect(diag.version).to.match(/-ortb-default-3$/);
     });
 
     it('should report ortb-disabled when the converter assignment is explicitly false', () => {
@@ -4583,7 +4583,7 @@ describe('IndexexchangeAdapter', function () {
       const request = spec.buildRequests([bid], DEFAULT_OPTION)[0];
       const diag = extractPayload(request).ext.ixdiag;
 
-      expect(diag.version).to.match(/-ortb-disabled-2$/);
+      expect(diag.version).to.match(/-ortb-disabled-3$/);
     });
 
     it('should store features in internal cache', () => {
