@@ -45,6 +45,31 @@ Use the newly built Prebid.js file on your test page in place of your existing b
 <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
 ```
 
+### 5. Enable Local Storage Access for Index Exchange
+
+Index Exchange recommends enabling browser storage access for the `ix` bidder. In **Prebid.js 7.0 and later**, bidder storage access is **disabled by default** unless explicitly permitted. Without this setting, the IX adapter cannot use local storage for features that depend on it, which may limit the functionality available during testing. This setting is recommended for **both legacy and ORTB Converter testing**; it does not itself enable the ORTB Converter.
+
+Add the following to your page's Prebid.js configuration **before requesting bids**:
+
+```javascript
+pbjs.bidderSettings = {
+  ix: {
+    storageAllowed: true
+  }
+};
+```
+
+If you already configure `pbjs.bidderSettings`, **add `storageAllowed: true` to the existing `ix` entry** instead of replacing the other bidder settings. For example:
+
+```javascript
+pbjs.bidderSettings = {
+  ...pbjs.bidderSettings,
+  ix: {
+    ...pbjs.bidderSettings?.ix,
+    storageAllowed: true
+  }
+};
+```
 
 ### Verification
 To verify the correct integration, inspect outgoing bid requests in your browser’s network tab (filter for `openrtb/pbjs`).
